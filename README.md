@@ -460,15 +460,6 @@ SOCKET_PORT=3001
 
 ---
 
-## 📝 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-**Built with ❤️ for the Full-Stack Engineer Assignment**
 
 ⭐ Star this repo if you found it helpful!
 
