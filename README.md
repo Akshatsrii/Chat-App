@@ -461,6 +461,4 @@ SOCKET_PORT=3001
 ---
 
 
-⭐ Star this repo if you found it helpful!
 
-</div>
