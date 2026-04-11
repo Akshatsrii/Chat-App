@@ -50,8 +50,7 @@
 | 👥 Active Users List | See live online users per room | ✅ |
 | 📜 Chat History | Persistent message storage via Strapi | ✅ |
 | 🌐 Strapi Webhooks | Trigger socket events on new messages | ✅ |
-| 📱 Responsive UI | Mobile-friendly Tailwind CSS design | ✅ |
-| ⚠️ Error Handling | Graceful error & feedback mechanisms | ✅ |
+
 
 ---
 
