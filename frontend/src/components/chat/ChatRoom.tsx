@@ -27,7 +27,7 @@ export default function ChatRoom({ onMenuClick }: ChatRoomProps) {
 
   const roomInfo = DEFAULT_ROOMS.find((r) => r.id === currentRoom);
   const roomName = roomInfo?.name ?? currentRoom ?? '';
-  const roomColor = roomInfo?.color ?? '#00d4ff';
+  const roomColor = roomInfo?.color ?? '#7c3aed';
   const roomIcon = roomInfo?.icon ?? '💬';
   const roomDesc = roomInfo?.description ?? '';
 
@@ -35,7 +35,6 @@ export default function ChatRoom({ onMenuClick }: ChatRoomProps) {
     messagesEndRef.current?.scrollIntoView({ behavior });
   }, []);
 
-  // Auto-scroll on new messages if near bottom
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
@@ -43,7 +42,6 @@ export default function ChatRoom({ onMenuClick }: ChatRoomProps) {
     if (isNearBottom) scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Track scroll position for scroll-to-bottom button
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
@@ -55,7 +53,6 @@ export default function ChatRoom({ onMenuClick }: ChatRoomProps) {
     return () => container.removeEventListener('scroll', handler);
   }, []);
 
-  // Focus search input when shown
   useEffect(() => {
     if (showSearch) searchInputRef.current?.focus();
   }, [showSearch]);
@@ -71,7 +68,6 @@ export default function ChatRoom({ onMenuClick }: ChatRoomProps) {
     setSearchQuery('');
   };
 
-  // Typing indicator text
   const typingText = (() => {
     const names = typingUsers.map((u) => u.username);
     if (!names.length) return null;
@@ -80,24 +76,49 @@ export default function ChatRoom({ onMenuClick }: ChatRoomProps) {
     return `${names.length} people are typing`;
   })();
 
-  const qualityColor = { excellent: '#00e5a0', good: '#ffb800', poor: '#ff3366', offline: '#5a7299' }[connectionQuality];
+  const qualityColor = {
+    excellent: '#86efac',
+    good:      '#fbbf24',
+    poor:      '#f87171',
+    offline:   '#4a4460',
+  }[connectionQuality];
+
+  const iconBtn = (active = false): React.CSSProperties => ({
+    background: active ? 'rgba(124,58,237,0.18)' : 'rgba(124,58,237,0.07)',
+    border: '1px solid rgba(124,58,237,0.15)',
+    borderRadius: '8px',
+    padding: '6px',
+    color: active ? '#a78bfa' : '#8b84a3',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '3px',
+    transition: 'background 0.15s, color 0.15s',
+  });
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex h-full overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
+
       {/* Main chat area */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* ── Header ──────────────────────────────────────────────────────── */}
+        {/* ── Header ── */}
         <div
           className="flex items-center gap-3 px-4 py-3 shrink-0"
           style={{
-            borderBottom: '1px solid var(--color-border)',
-            background: 'rgba(13,21,32,0.8)',
+            borderBottom: '1px solid rgba(124,58,237,0.12)',
+            background: 'rgba(10,10,15,0.85)',
             backdropFilter: 'blur(12px)',
           }}
         >
           {/* Mobile menu */}
-          <button onClick={onMenuClick} className="lg:hidden btn-icon shrink-0">
+          <button
+            onClick={onMenuClick}
+            className="lg:hidden shrink-0"
+            style={iconBtn()}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(124,58,237,0.18)'; e.currentTarget.style.color = '#a78bfa'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(124,58,237,0.07)'; e.currentTarget.style.color = '#8b84a3'; }}
+          >
             <Menu size={18} />
           </button>
 
@@ -105,34 +126,73 @@ export default function ChatRoom({ onMenuClick }: ChatRoomProps) {
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0"
-              style={{ background: `${roomColor}18`, border: `1px solid ${roomColor}30` }}
+              style={{ background: `${roomColor}18`, border: `1px solid ${roomColor}35` }}
             >
               {roomIcon}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-text-bright leading-none">{roomName}</h2>
-                <div className="w-1.5 h-1.5 rounded-full hidden sm:block" style={{ background: qualityColor }} />
+                <h2
+                  className="text-sm leading-none"
+                  style={{
+                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontWeight: 700,
+                    color: '#f3f0ff',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {roomName}
+                </h2>
+                <div
+                  className="w-1.5 h-1.5 rounded-full hidden sm:block"
+                  style={{ background: qualityColor }}
+                />
               </div>
-              {roomDesc && <p className="text-[11px] truncate hidden sm:block" style={{ color: 'var(--color-subtle)' }}>{roomDesc}</p>}
+              {roomDesc && (
+                <p
+                  className="text-[11px] truncate hidden sm:block mt-0.5"
+                  style={{
+                    color: '#5c5870',
+                    fontFamily: "'JetBrains Mono', monospace",
+                  }}
+                >
+                  {roomDesc}
+                </p>
+              )}
             </div>
           </div>
 
           {/* Right actions */}
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+
             {/* Online count */}
             <div
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono cursor-default"
-              style={{ background: 'rgba(0,229,160,0.06)', color: 'var(--color-emerald)', border: '1px solid rgba(0,229,160,0.12)' }}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs cursor-default"
+              style={{
+                background: 'rgba(124,58,237,0.08)',
+                color: '#a78bfa',
+                border: '1px solid rgba(124,58,237,0.15)',
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
             >
-              <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--color-emerald)', animation: 'glow-pulse 2s ease infinite' }} />
+              <div
+                className="w-1.5 h-1.5 rounded-full animate-pulse"
+                style={{ background: '#7c3aed' }}
+              />
               {activeUsers.length} online
             </div>
 
             {/* Search */}
             {showSearch ? (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg animate-fade-in-scale" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-bright)' }}>
-                <Search size={13} style={{ color: 'var(--color-subtle)' }} />
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                style={{
+                  background: '#0f0f18',
+                  border: '1px solid rgba(124,58,237,0.35)',
+                  boxShadow: '0 0 0 3px rgba(124,58,237,0.08)',
+                }}
+              >
+                <Search size={13} style={{ color: '#6b5fa0' }} />
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -140,20 +200,38 @@ export default function ChatRoom({ onMenuClick }: ChatRoomProps) {
                   onChange={(e) => handleSearch(e.target.value)}
                   onKeyDown={(e) => e.key === 'Escape' && closeSearch()}
                   placeholder="Search messages…"
-                  className="bg-transparent outline-none text-sm font-body w-36"
-                  style={{ color: 'var(--color-text-bright)' }}
+                  style={{
+                    background: 'transparent',
+                    outline: 'none',
+                    fontSize: '13px',
+                    width: '140px',
+                    color: '#e9e6f4',
+                    fontFamily: "'Inter', sans-serif",
+                    border: 'none',
+                  }}
                 />
                 {localSearch && (
-                  <button onClick={() => handleSearch('')} className="btn-icon w-5 h-5">
+                  <button
+                    onClick={() => handleSearch('')}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4060', display: 'flex', padding: '2px' }}
+                  >
                     <X size={11} />
                   </button>
                 )}
-                <button onClick={closeSearch} className="btn-icon w-6 h-6">
+                <button
+                  onClick={closeSearch}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4060', display: 'flex', padding: '2px' }}
+                >
                   <X size={13} />
                 </button>
               </div>
             ) : (
-              <button onClick={() => setShowSearch(true)} className={cn('btn-icon', showSearch ? 'active' : '')} data-tooltip="Search messages">
+              <button
+                onClick={() => setShowSearch(true)}
+                style={iconBtn(showSearch)}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(124,58,237,0.18)'; e.currentTarget.style.color = '#a78bfa'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(124,58,237,0.07)'; e.currentTarget.style.color = '#8b84a3'; }}
+              >
                 <Search size={16} />
               </button>
             )}
@@ -161,23 +239,43 @@ export default function ChatRoom({ onMenuClick }: ChatRoomProps) {
             {/* Toggle user list */}
             <button
               onClick={() => setShowUsers((p) => !p)}
-              className={cn('btn-icon hidden md:flex', showUsers ? 'active' : '')}
-              data-tooltip="Members"
+              className="hidden md:flex"
+              style={iconBtn(showUsers)}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(124,58,237,0.18)'; e.currentTarget.style.color = '#a78bfa'; }}
+              onMouseLeave={(e) => {
+                if (!showUsers) {
+                  e.currentTarget.style.background = 'rgba(124,58,237,0.07)';
+                  e.currentTarget.style.color = '#8b84a3';
+                }
+              }}
             >
               <Users size={16} />
-              <ChevronRight size={11} style={{ transform: showUsers ? 'rotate(180deg)' : undefined, transition: 'transform 0.2s' }} />
+              <ChevronRight
+                size={11}
+                style={{ transform: showUsers ? 'rotate(180deg)' : undefined, transition: 'transform 0.2s' }}
+              />
             </button>
           </div>
         </div>
 
-        {/* ── Messages ────────────────────────────────────────────────────── */}
+        {/* ── Messages ── */}
         <div
           ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto px-4 py-2 messages-scroll relative"
-          style={{ background: 'var(--color-void)' }}
+          className="flex-1 overflow-y-auto px-4 py-2 relative"
+          style={{
+            background: '#0a0a0f',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(124,58,237,0.2) transparent',
+          }}
         >
-          {/* Subtle grid */}
-          <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(124,58,237,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,0.03) 1px,transparent 1px)',
+              backgroundSize: '32px 32px',
+            }}
+          />
           <div className="relative z-10">
             <MessageList messages={messages} searchQuery={searchQuery} />
             <div ref={messagesEndRef} />
@@ -188,43 +286,60 @@ export default function ChatRoom({ onMenuClick }: ChatRoomProps) {
         {showScrollBtn && (
           <button
             onClick={() => scrollToBottom()}
-            className="absolute bottom-28 right-6 z-20 w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold animate-fade-in-scale"
+            className="absolute bottom-28 right-6 z-20 w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"
             style={{
-              background: 'var(--color-panel-2)',
-              border: '1px solid var(--color-border)',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-              color: 'var(--color-cyan)',
+              background: '#0f0f18',
+              border: '1px solid rgba(124,58,237,0.25)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+              color: '#a78bfa',
+              cursor: 'pointer',
+              fontFamily: "'Space Grotesk', sans-serif",
             }}
           >
             ↓
           </button>
         )}
 
-        {/* ── Typing indicator ─────────────────────────────────────────────── */}
+        {/* ── Typing indicator ── */}
         <div className="px-4 h-7 flex items-center shrink-0">
           {typingText && (
-            <div className="flex items-center gap-2 animate-fade-in-up">
+            <div className="flex items-center gap-2">
               <div className="typing-indicator">
                 <div className="typing-dot" />
                 <div className="typing-dot" />
                 <div className="typing-dot" />
               </div>
-              <span className="text-[11px] font-mono" style={{ color: 'var(--color-subtle)' }}>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  color: '#5c5870',
+                }}
+              >
                 {typingText}
               </span>
             </div>
           )}
         </div>
 
-        {/* ── Input ─────────────────────────────────────────────────────────── */}
-        <div className="px-4 pb-4 pt-1 shrink-0" style={{ borderTop: '1px solid var(--color-border)', background: 'rgba(13,21,32,0.6)' }}>
+        {/* ── Input ── */}
+        <div
+          className="px-4 pb-4 pt-2 shrink-0"
+          style={{
+            borderTop: '1px solid rgba(124,58,237,0.1)',
+            background: 'rgba(10,10,15,0.7)',
+          }}
+        >
           <MessageInput roomName={roomName.toLowerCase()} />
         </div>
       </div>
 
-      {/* ── User list ────────────────────────────────────────────────────────── */}
+      {/* ── User list ── */}
       {showUsers && (
-        <div className="hidden md:flex shrink-0 animate-slide-in-right">
+        <div
+          className="hidden md:flex shrink-0"
+          style={{ borderLeft: '1px solid rgba(124,58,237,0.1)' }}
+        >
           <UserList users={activeUsers} currentUserId={user?.id ?? 0} />
         </div>
       )}

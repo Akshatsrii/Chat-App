@@ -12,7 +12,36 @@ export default function ChatShell() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-void relative">
+    <div
+      className="flex h-screen overflow-hidden relative"
+      style={{ background: '#0a0a0f', fontFamily: "'Inter', sans-serif" }}
+    >
+      {/* Ambient glow blobs */}
+      <div
+        className="absolute top-[-15%] left-[-8%] w-[500px] h-[500px] rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)',
+          filter: 'blur(80px)',
+        }}
+      />
+      <div
+        className="absolute bottom-[-15%] right-[-8%] w-[400px] h-[400px] rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(167,139,250,0.08) 0%, transparent 70%)',
+          filter: 'blur(80px)',
+        }}
+      />
+
+      {/* Subtle grid overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(124,58,237,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(124,58,237,0.03) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+        }}
+      />
+
       {/* Particle layer */}
       <ParticleBackground />
 
