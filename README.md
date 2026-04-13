@@ -1,463 +1,283 @@
-<div align="center">
+# NexusChat — Real-Time Chat Application
 
-<img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" />
-<img src="https://img.shields.io/badge/Strapi-4945FF?style=for-the-badge&logo=strapi&logoColor=white" />
-<img src="https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socketdotio&logoColor=white" />
-<img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" />
-<img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" />
-
-<br/><br/>
-
-# 💬 RealTalk — Real-Time Chat Application
-
-> **A full-stack real-time chat application** built with Next.js, Strapi CMS, and Socket.io — enabling instant messaging, room management, and live user presence.
-
-<br/>
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
-![Status](https://img.shields.io/badge/Status-Active-success)
-
-</div>
+Production-grade real-time chat built with **Next.js 15 · Express 5 · MongoDB · Socket.io 4 · Tailwind CSS v4 · Node.js 24**.
 
 ---
 
-## 📋 Table of Contents
+## Stack
 
-- [✨ Features](#-features)
-- [🏗️ Architecture Overview](#️-architecture-overview)
-- [🔄 Application Flow](#-application-flow)
-- [⚙️ Tech Stack](#️-tech-stack)
-- [📁 Project Structure](#-project-structure)
-- [🚀 Getting Started](#-getting-started)
-- [🔌 API Endpoints](#-api-endpoints)
-- [🌐 Socket Events](#-socket-events)
-- [🖼️ UI Components](#️-ui-components)
-- [🔐 Authentication Flow](#-authentication-flow)
-- [🛠️ Environment Variables](#️-environment-variables)
-- [📊 Database Schema](#-database-schema)
-- [📝 License](#-license)
+| Layer | Technology | Version |
+|---|---|---|
+| Frontend | Next.js App Router | 15 |
+| Styling | Tailwind CSS | v4 |
+| Backend | **Express** | 5.x |
+| Database | **MongoDB** (local 127.0.0.1) | 7 |
+| ODM | Mongoose | 8.x |
+| Real-time | Socket.io | 4.x |
+| Auth | JWT + bcryptjs | — |
+| Runtime | **Node.js** | **24** |
+| Containers | Docker + Compose | — |
 
 ---
 
-## ✨ Features
-
-| Feature | Description | Status |
-|---------|-------------|--------|
-| 🔐 User Authentication | Register & login with username/password | ✅ |
-| 💬 Real-Time Messaging | Instant messages via Socket.io | ✅ |
-| 🏠 Chat Rooms | Join named rooms & chat within them | ✅ |
-| 👥 Active Users List | See live online users per room | ✅ |
-| 📜 Chat History | Persistent message storage via Strapi | ✅ |
-| 🌐 Strapi Webhooks | Trigger socket events on new messages | ✅ |
-
-
----
-
-## 🏗️ Architecture Overview
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                        CLIENT                            │
-│   ┌─────────────┐   ┌──────────────┐  ┌─────────────┐  │
-│   │  Next.js    │   │  Socket.io   │  │  Tailwind   │  │
-│   │   Pages &   │◄──│   Client     │  │    CSS UI   │  │
-│   │  Components │   │  (ws://)     │  │             │  │
-│   └──────┬──────┘   └──────┬───────┘  └─────────────┘  │
-└──────────┼─────────────────┼───────────────────────────-┘
-           │  REST API        │  WebSocket
-           ▼                 ▼
-┌─────────────────────────────────────────────────────────┐
-│                        BACKEND                           │
-│   ┌─────────────┐   ┌──────────────┐                    │
-│   │   Strapi    │──►│  Webhooks    │                    │
-│   │  REST API   │   │  (on create) │                    │
-│   └──────┬──────┘   └──────┬───────┘                   │
-│          │                 ▼                             │
-│          │          ┌──────────────┐                    │
-│          │          │  Socket.io   │                    │
-│          │          │   Server     │                    │
-│          │          └──────────────┘                    │
-│          ▼                                               │
-│   ┌─────────────┐                                       │
-│   │  PostgreSQL  │  (or SQLite for dev)                 │
-│   │  Database   │                                       │
-│   └─────────────┘                                       │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────┐  HTTP   ┌────────────────────────────────┐
+│  Next.js Frontend    │◄───────►│  Express 5 Backend :1337       │
+│  :3000               │         │                                │
+│                      │         │  POST /api/auth/local/register │
+│  AuthContext         │         │  POST /api/auth/local          │
+│  SocketContext       │◄───────►│  GET  /api/users/me            │
+│  UI Components       │  WS/WSS │  GET  /api/messages            │
+└──────────────────────┘         │  POST /api/messages            │
+                                 │  Socket.io (same HTTP server)  │
+                                 └────────────┬───────────────────┘
+                                              │ Mongoose
+                                              ▼
+                                 ┌────────────────────────────────┐
+                                 │  MongoDB 7 @ 127.0.0.1:27017   │
+                                 │  DB: nexuschat                 │
+                                 │  Collections: users, messages  │
+                                 └────────────────────────────────┘
 ```
 
 ---
 
-## 🔄 Application Flow
+## Features
 
-### 1️⃣ User Registration & Login Flow
+**Auth** — Register/login, bcrypt (12 rounds), JWT cookies (7d), rate limiting, session restore
 
-```
-User Opens App
-      │
-      ▼
-┌─────────────┐    NO     ┌──────────────┐
-│  Has Token? │──────────►│  Show Login  │
-└──────┬──────┘           │  /Register   │
-       │ YES              └──────┬───────┘
-       ▼                         │ Submit
-┌─────────────┐                  ▼
-│  Dashboard  │◄────────┌──────────────┐
-│ (Room List) │  Token  │  Strapi Auth │
-└─────────────┘  Stored │  API Call    │
-                        └──────────────┘
-```
+**Chat** — Real-time WebSockets, message history (60 msgs), emoji reactions (persisted in Mongo), reply threads, edit/delete own messages, typing indicators, live user presence, system join/leave events, message search with highlights, optimistic sends
 
-### 2️⃣ Real-Time Messaging Flow
-
-```
-User Sends Message
-        │
-        ▼
- Next.js Frontend
- (POST /api/messages)
-        │
-        ▼
-  Strapi REST API ──► Saves to DB
-        │
-        ▼ (Webhook Fires)
-  Socket.io Server
-        │
-        ├──► Broadcast to Room
-        │         │
-        │         ▼
-        │   All Room Members
-        │   Receive Message
-        │
-        └──► Emit 'new-message' event
-```
-
-### 3️⃣ Room Join & Presence Flow
-
-```
-User Selects Room
-        │
-        ▼
- Socket.io Client
- emit('join-room', { roomId, user })
-        │
-        ▼
- Socket.io Server
-        │
-        ├──► socket.join(roomId)
-        ├──► Update active users map
-        └──► broadcast('user-joined')
-                   │
-                   ▼
-           All Room Users Update
-           Active Users Sidebar
-```
+**UI** — Animated particle canvas, spring-physics message bubbles, emoji picker, hover profile cards, unread badges, connection quality indicator, sound toggle, mobile sidebar, context menu, scroll-to-bottom
 
 ---
 
-## ⚙️ Tech Stack
-
-### Frontend
-| Technology | Purpose | Version |
-|-----------|---------|---------|
-| **Next.js** | React Framework (Routing, SSR, API) | `^14.x` |
-| **Socket.io Client** | Real-time WS communication | `^4.x` |
-| **Tailwind CSS** | Utility-first styling | `^3.x` |
-| **React Context** | Auth state management | Built-in |
-| **Axios** | HTTP client for REST calls | `^1.x` |
-
-### Backend
-| Technology | Purpose | Version |
-|-----------|---------|---------|
-| **Strapi** | Headless CMS + REST API | `^4.x` |
-| **Socket.io Server** | WebSocket real-time engine | `^4.x` |
-| **Node.js** | JavaScript runtime | `^18.x` |
-| **SQLite / PostgreSQL** | Database (dev / prod) | — |
-
----
-
-## 📁 Project Structure
+## Project Structure
 
 ```
-realtalk/
+nexus-chat/
+├── frontend/                     # Next.js 15
+│   └── src/
+│       ├── app/                  # Pages + auth-guarded layouts
+│       ├── components/chat/      # ChatShell, ChatRoom, Sidebar,
+│       │                         # MessageList, MessageInput, UserList, WelcomeScreen
+│       ├── components/auth/      # LoginForm, RegisterForm
+│       ├── components/ui/        # ParticleBackground (canvas)
+│       ├── contexts/
+│       │   ├── AuthContext.tsx   # JWT state — Express-compatible API calls
+│       │   └── SocketContext.tsx # Socket.io state + all real-time actions
+│       ├── lib/
+│       │   ├── socket.ts         # Socket singleton + event names enum
+│       │   ├── rooms.ts          # Default rooms config
+│       │   └── utils.ts          # Helpers, formatters, sound
+│       └── types/index.ts
 │
-├── 📂 frontend/                  # Next.js Application
-│   ├── 📂 components/
-│   │   ├── Auth/
-│   │   │   ├── LoginForm.jsx     # Login UI component
-│   │   │   └── RegisterForm.jsx  # Registration UI
-│   │   ├── Chat/
-│   │   │   ├── ChatRoom.jsx      # Main chat interface
-│   │   │   ├── MessageList.jsx   # Message feed display
-│   │   │   ├── MessageInput.jsx  # Message compose bar
-│   │   │   └── ActiveUsers.jsx   # Live users sidebar
-│   │   └── Layout/
-│   │       └── Navbar.jsx        # Navigation bar
-│   ├── 📂 pages/
-│   │   ├── index.jsx             # Landing / redirect
-│   │   ├── login.jsx             # Login page
-│   │   ├── register.jsx          # Register page
-│   │   └── room/
-│   │       └── [roomId].jsx      # Dynamic room page
-│   ├── 📂 lib/
-│   │   ├── socket.js             # Socket.io client init
-│   │   └── api.js                # Axios API helpers
-│   ├── 📂 context/
-│   │   └── AuthContext.jsx       # Global auth state
-│   └── .env.local                # Frontend env vars
-│
-├── 📂 backend/                   # Strapi + Socket.io
-│   ├── 📂 src/
-│   │   ├── 📂 api/
-│   │   │   ├── message/          # Message content type
-│   │   │   │   ├── content-types/
-│   │   │   │   │   └── schema.json
-│   │   │   │   ├── controllers/
-│   │   │   │   ├── routes/
-│   │   │   │   └── services/
-│   │   │   └── chat-room/        # Chat Room content type
-│   │   ├── 📂 extensions/
-│   │   │   └── users-permissions/ # Auth customizations
-│   │   └── 📂 socket/
-│   │       └── index.js          # Socket.io server logic
-│   ├── 📂 config/
-│   │   ├── database.js
-│   │   ├── server.js
-│   │   └── middlewares.js
-│   └── .env                      # Backend env vars
-│
-└── README.md
+└── backend/                      # Express 5 + MongoDB
+    ├── server.js                 # Entry: HTTP server + Socket.io bootstrap
+    └── src/
+        ├── app.js                # Express app, CORS, helmet, morgan, routes
+        ├── config/database.js    # Mongoose connect with exponential retry
+        ├── models/
+        │   ├── User.js           # Schema: username, email, bcrypt, indexes
+        │   └── Message.js        # Schema: content, room, reactions[], replyTo, soft-delete
+        ├── controllers/
+        │   ├── auth.controller.js
+        │   └── message.controller.js
+        ├── routes/
+        │   ├── auth.routes.js    # Validation via express-validator
+        │   └── message.routes.js
+        ├── middleware/
+        │   ├── auth.js           # JWT protect middleware
+        │   ├── errorHandler.js   # Central error → JSON (Mongoose, JWT, 404)
+        │   └── rateLimiter.js    # express-rate-limit
+        ├── socket/index.js       # Full Socket.io: join/send/react/edit/delete/typing
+        └── utils/
+            ├── jwt.js            # signToken, verifyToken
+            └── logger.js         # Winston (console + rotating file in prod)
 ```
 
 ---
 
-## 🚀 Getting Started
+## Prerequisites
 
-### Prerequisites
-
-- Node.js `v18+`
-- npm or yarn
-- Git
-
-### 1. Clone the Repository
+### Node.js 24
 
 ```bash
-git clone https://github.com/your-username/realtalk.git
-cd realtalk
+# nvm (recommended)
+nvm install 24 && nvm use 24
+
+# fnm
+fnm install 24 && fnm use 24
+
+# Verify
+node --version   # v24.x.x
 ```
 
-### 2. Setup Backend (Strapi)
+### MongoDB 7 (local)
+
+```bash
+# macOS (Homebrew)
+brew install mongodb-community@7.0
+brew services start mongodb-community@7.0
+
+# Ubuntu/Debian
+sudo apt-get install -y mongodb
+sudo systemctl enable --now mongod
+
+# Verify
+mongosh --eval "db.adminCommand('ping')"
+# → { ok: 1 }
+```
+
+---
+
+## Quick Start
+
+### Backend
 
 ```bash
 cd backend
+nvm use            # auto-reads .nvmrc → 24
 npm install
-
-# Copy environment file
 cp .env.example .env
 
-# Start Strapi in development
-npm run develop
+# Generate a strong JWT secret
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+# Paste the output into .env as JWT_SECRET=...
+
+npm run dev
+# ✅  MongoDB connected → mongodb://127.0.0.1:27017/nexuschat
+# 🚀  NexusChat API running → http://localhost:1337
 ```
 
-> 🌐 Strapi Admin Panel: `http://localhost:1337/admin`
-
-**Create an admin account**, then configure:
-- ✅ Enable public access to `messages` collection (GET, POST)
-- ✅ Enable `users-permissions` plugin endpoints
-- ✅ Set up Webhook → `http://localhost:3001/webhook/new-message`
-
-### 3. Setup Frontend (Next.js)
+### Frontend
 
 ```bash
-cd ../frontend
+cd frontend
+nvm use
 npm install
-
-# Copy environment file
 cp .env.local.example .env.local
+# Already configured: NEXT_PUBLIC_STRAPI_URL=http://localhost:1337
 
-# Start Next.js
 npm run dev
+# → http://localhost:3000
 ```
 
-> 🌐 Frontend App: `http://localhost:3000`
-
-### 4. Run Both Together
-
-```bash
-# From root — run both concurrently
-npm run dev
-```
+Open **http://localhost:3000**, register, join a room, open a second tab and chat!
 
 ---
 
-## 🔌 API Endpoints
+## API Reference
 
-### Authentication (Strapi)
+### Auth (Strapi-compatible format — no frontend changes needed)
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/auth/local/register` | Register new user |
-| `POST` | `/api/auth/local` | Login, get JWT token |
-| `GET` | `/api/users/me` | Get current user profile |
+```
+POST /api/auth/local/register
+Body: { "username": "alice", "email": "alice@ex.com", "password": "Secret123" }
+Response: { "jwt": "eyJ...", "user": { "id", "username", "email", "createdAt" } }
+
+POST /api/auth/local
+Body: { "identifier": "alice@ex.com", "password": "Secret123" }
+Response: { "jwt": "eyJ...", "user": { ... } }
+
+GET /api/users/me
+Headers: Authorization: Bearer <jwt>
+Response: { "id", "username", "email", "createdAt" }
+```
 
 ### Messages
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/messages?filters[room][$eq]=:roomId` | Get room messages |
-| `POST` | `/api/messages` | Create a new message |
+```
+GET /api/messages?filters[room][$eq]=general&pagination[pageSize]=50
+Headers: Authorization: Bearer <jwt>
+Response: { "data": [...], "meta": { "pagination": { ... } } }
 
-### Chat Rooms
+POST /api/messages
+Headers: Authorization: Bearer <jwt>
+Body: { "data": { "content": "Hello!", "room": "general" } }
+Response: { "data": { "id", "content", "room", ... } }
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/chat-rooms` | List all chat rooms |
-| `POST` | `/api/chat-rooms` | Create a new room |
+GET /health
+Response: { "status": "ok", "uptime": 42, "node": "v24.x.x", "mongodb": "connected" }
+```
 
 ---
 
-## 🌐 Socket Events
+## Socket.io Events
 
 ### Client → Server
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `join-room` | `{ roomId, user }` | Join a specific chat room |
-| `leave-room` | `{ roomId, user }` | Leave a chat room |
-| `send-message` | `{ roomId, message, user }` | Broadcast a message |
-| `typing` | `{ roomId, user }` | Emit typing indicator |
+| Event | Payload |
+|---|---|
+| `chat:join-room` | `{ room }` |
+| `chat:send-message` | `{ content, room, replyToId? }` |
+| `chat:typing-start` | `{ room }` |
+| `chat:typing-stop` | `{ room }` |
+| `chat:add-reaction` | `{ messageId, emoji, room }` |
+| `chat:edit-message` | `{ messageId, content, room }` |
+| `chat:delete-message` | `{ messageId, room }` |
+| `chat:leave-room` | `{ room }` |
 
 ### Server → Client
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `new-message` | `{ id, text, user, createdAt }` | New message received |
-| `user-joined` | `{ user, activeUsers }` | User entered the room |
-| `user-left` | `{ user, activeUsers }` | User exited the room |
-| `active-users` | `[...users]` | Current online users list |
-| `typing` | `{ user }` | Another user is typing |
+| Event | Payload |
+|---|---|
+| `chat:message-history` | `SocketMessage[]` |
+| `chat:new-message` | `SocketMessage` |
+| `chat:message-updated` | updated message |
+| `chat:message-deleted` | `{ id }` |
+| `chat:reaction-updated` | `{ messageId, reactions }` |
+| `chat:active-users` | `ActiveUser[]` |
+| `chat:typing-users` | `TypingUser[]` |
+| `chat:user-joined` | `{ username, userId, room }` |
+| `chat:user-left` | `{ username, userId, room }` |
+| `chat:error` | `{ message }` |
 
 ---
 
-## 🖼️ UI Components
+## Backend Environment Variables
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  NAVBAR  ─────────────── RealTalk  [Username] [Logout]   │
-├──────────────────────────────────────────────────────────┤
-│                                           │              │
-│  ROOM LIST          MESSAGE FEED          │  ACTIVE      │
-│  ──────────         ──────────────────    │  USERS       │
-│  # general     │   [Alice] Hello! 👋      │  ──────────  │
-│  # dev-chat    │   [Bob] Hey there!       │  🟢 Alice    │
-│  # random      │   [You] Sup everyone     │  🟢 Bob      │
-│                │                          │  🟢 You      │
-│                │   ────────────────────   │              │
-│                │   [  Type a message... ] │              │
-└──────────────────────────────────────────────────────────┘
-```
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `1337` | HTTP port |
+| `MONGO_URI` | `mongodb://127.0.0.1:27017/nexuschat` | Local MongoDB |
+| `JWT_SECRET` | — | **Required** — 64-char hex string |
+| `JWT_EXPIRES_IN` | `7d` | Token lifetime |
+| `FRONTEND_URL` | `http://localhost:3000` | CORS allowed origin |
+| `RATE_LIMIT_MAX` | `200` | Requests per 15 min |
+| `AUTH_RATE_LIMIT_MAX` | `20` | Auth attempts per 15 min |
+| `LOG_LEVEL` | `info` | Winston level |
 
 ---
 
-## 🔐 Authentication Flow
+## Docker (production)
 
-```
-                  ┌────────────────────┐
-                  │   User Submits     │
-                  │   Login Form       │
-                  └────────┬───────────┘
-                           │
-                           ▼
-                  ┌────────────────────┐
-                  │  POST /api/auth/   │
-                  │  local (Strapi)    │
-                  └────────┬───────────┘
-                           │
-              ┌────────────┴────────────┐
-              │ Success                 │ Failure
-              ▼                         ▼
-    ┌──────────────────┐      ┌──────────────────┐
-    │  Store JWT in    │      │  Show Error Msg  │
-    │  localStorage /  │      │  to User         │
-    │  httpOnly cookie │      └──────────────────┘
-    └────────┬─────────┘
-             │
-             ▼
-    ┌──────────────────┐
-    │  Redirect to     │
-    │  /room/general   │
-    └──────────────────┘
+```bash
+cp .env.example .env
+# Edit .env: set JWT_SECRET at minimum
+
+docker compose up -d --build
+# Starts MongoDB 7 + Express backend + Next.js frontend
+
+docker compose logs -f backend   # watch logs
+docker compose down              # stop
 ```
 
 ---
 
-## 🛠️ Environment Variables
+## MongoDB Quick Reference
 
-### Frontend (`frontend/.env.local`)
+```bash
+mongosh nexuschat
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:1337
-NEXT_PUBLIC_SOCKET_URL=http://localhost:3001
+# Messages per room
+db.messages.aggregate([{ $group: { _id: "$room", count: { $sum: 1 } } }])
+
+# All users
+db.users.find({}, { username: 1, email: 1, createdAt: 1 }).sort({ createdAt: -1 })
+
+# Recent messages in general
+db.messages.find({ room: "general" }).sort({ createdAt: -1 }).limit(10)
 ```
-
-### Backend (`backend/.env`)
-
-```env
-HOST=0.0.0.0
-PORT=1337
-APP_KEYS=your-app-keys-here
-API_TOKEN_SALT=your-salt-here
-ADMIN_JWT_SECRET=your-admin-secret
-JWT_SECRET=your-jwt-secret
-DATABASE_CLIENT=sqlite
-DATABASE_FILENAME=.tmp/data.db
-SOCKET_PORT=3001
-```
-
----
-
-## 📊 Database Schema
-
-### Message Content Type
-
-```json
-{
-  "kind": "collectionType",
-  "collectionName": "messages",
-  "attributes": {
-    "text":      { "type": "text",     "required": true },
-    "user":      { "type": "relation", "target": "plugin::users-permissions.user" },
-    "chat_room": { "type": "relation", "target": "api::chat-room.chat-room" },
-    "createdAt": { "type": "datetime" }
-  }
-}
-```
-
-### ChatRoom Content Type
-
-```json
-{
-  "kind": "collectionType",
-  "collectionName": "chat_rooms",
-  "attributes": {
-    "name":        { "type": "string",   "required": true, "unique": true },
-    "description": { "type": "text" },
-    "messages":    { "type": "relation", "target": "api::message.message", "relation": "oneToMany" }
-  }
-}
-```
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
----
-
-
-
