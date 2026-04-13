@@ -9,7 +9,7 @@ interface Particle {
   color: string; life: number; maxLife: number;
 }
 
-const COLORS = ['#00d4ff', '#9966ff', '#00e5a0', '#ffb800', '#ff33aa'];
+const COLORS = ['#a855f7', '#7c3aed', '#c084fc', '#6d28d9', '#9333ea'];
 
 export default function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -35,7 +35,6 @@ export default function ParticleBackground() {
     };
     window.addEventListener('mousemove', onMouseMove);
 
-    // Spawn particles
     const spawnParticle = () => {
       const color = COLORS[Math.floor(Math.random() * COLORS.length)];
       particlesRef.current.push({
@@ -51,8 +50,14 @@ export default function ParticleBackground() {
       });
     };
 
-    // Initial population
     for (let i = 0; i < 80; i++) spawnParticle();
+
+    const hexToRgb = (hex: string) => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return { r, g, b };
+    };
 
     let frameCount = 0;
     const draw = () => {
@@ -60,10 +65,9 @@ export default function ParticleBackground() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       frameCount++;
 
-      // Spawn new particles occasionally
       if (frameCount % 8 === 0 && particlesRef.current.length < 120) spawnParticle();
 
-      // Draw connection lines
+      // Connection lines — purple tint
       ctx.lineWidth = 0.4;
       for (let i = 0; i < particlesRef.current.length; i++) {
         const a = particlesRef.current[i];
@@ -73,7 +77,7 @@ export default function ParticleBackground() {
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < 120) {
             ctx.beginPath();
-            ctx.strokeStyle = `rgba(0,212,255,${0.04 * (1 - dist / 120)})`;
+            ctx.strokeStyle = `rgba(139,92,246,${0.06 * (1 - dist / 120)})`;
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
             ctx.stroke();
@@ -81,12 +85,10 @@ export default function ParticleBackground() {
         }
       }
 
-      // Draw & update particles
       particlesRef.current = particlesRef.current.filter((p) => {
         p.life++;
         if (p.life > p.maxLife) return false;
 
-        // Mouse repulsion
         const mdx = p.x - mouseRef.current.x;
         const mdy = p.y - mouseRef.current.y;
         const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
@@ -100,13 +102,11 @@ export default function ParticleBackground() {
         p.x += p.vx;
         p.y += p.vy;
 
-        // Wrap around edges
         if (p.x < 0) p.x = canvas.width;
         if (p.x > canvas.width) p.x = 0;
         if (p.y < 0) p.y = canvas.height;
         if (p.y > canvas.height) p.y = 0;
 
-        // Fade in/out
         const lifeRatio = p.life / p.maxLife;
         const alpha = lifeRatio < 0.2
           ? lifeRatio / 0.2
@@ -114,20 +114,18 @@ export default function ParticleBackground() {
           ? (1 - lifeRatio) / 0.2
           : 1;
 
+        const { r, g, b } = hexToRgb(p.color);
+
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = p.color.replace(')', `,${p.opacity * alpha})`).replace('rgb(', 'rgba(').replace('#', '').replace(
-          /^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i,
-          (_, r, g, b) => `rgba(${parseInt(r,16)},${parseInt(g,16)},${parseInt(b,16)},${p.opacity * alpha})`
-        );
+        ctx.fillStyle = `rgba(${r},${g},${b},${p.opacity * alpha})`;
         ctx.fill();
 
         // Glow
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
         const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
-        grad.addColorStop(0, p.color.replace('#', '').replace(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i,
-          (_, r, g, b) => `rgba(${parseInt(r,16)},${parseInt(g,16)},${parseInt(b,16)},${0.08 * alpha})`));
+        grad.addColorStop(0, `rgba(${r},${g},${b},${0.1 * alpha})`);
         grad.addColorStop(1, 'transparent');
         ctx.fillStyle = grad;
         ctx.fill();
@@ -148,7 +146,7 @@ export default function ParticleBackground() {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none z-0"
-      style={{ opacity: 0.5 }}
+      style={{ opacity: 0.6 }}
     />
   );
 }
