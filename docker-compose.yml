@@ -1,28 +1,61 @@
-version: '3.9'
+# ══════════════════════════════════════════════════════════════════════════════
+#  NexusChat — Docker Compose (Production-hardened)
+# ══════════════════════════════════════════════════════════════════════════════
+#  Usage:
+#    cp .env.example .env          # fill in secrets
+#    docker compose up -d          # start stack
+#    docker compose logs -f        # tail logs
+#    docker compose down -v        # destroy + wipe volumes
+# ══════════════════════════════════════════════════════════════════════════════
 
 services:
-  # ── MongoDB ───────────────────────────────────────────────────────────────────
+
+  # ── MongoDB ─────────────────────────────────────────────────────────────────
   mongo:
     image: mongo:7-jammy
+    container_name: nexus_mongo
     restart: unless-stopped
-    ports:
-      - "27017:27017"
+    command: ["mongod", "--quiet", "--logpath", "/dev/null"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-nexus}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASS:?MONGO_ROOT_PASS is required}
+      MONGO_INITDB_DATABASE: nexuschat
     volumes:
       - mongodata:/data/db
       - mongoconfig:/data/configdb
+      - ./mongo-init:/docker-entrypoint-initdb.d:ro   # seed / init scripts
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet",
+             "-u", "${MONGO_ROOT_USER:-nexus}",
+             "-p", "${MONGO_ROOT_PASS}",
+             "--eval", "db.adminCommand('ping').ok",
+             "--authenticationDatabase", "admin"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 20s
     networks:
       - internal
+    # !! Never expose 27017 externally in production !!
+    # ports:
+    #   - "127.0.0.1:27017:27017"   # localhost-only if you need Compass
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.75'
 
-  # ── Express Backend (Node 24) ─────────────────────────────────────────────────
+  # ── Express Backend ──────────────────────────────────────────────────────────
   backend:
+    container_name: nexus_backend
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: runner          # explicit multi-stage target
+      cache_from:
+        - type=local,src=/tmp/.buildcache/backend
+      cache_to:
+        - type=local,dest=/tmp/.buildcache/backend,mode=max
     restart: unless-stopped
     depends_on:
       mongo:
@@ -31,39 +64,143 @@ services:
       NODE_ENV: production
       PORT: 1337
       HOST: 0.0.0.0
-      MONGO_URI: mongodb://mongo:27017/nexuschat
+      MONGO_URI: mongodb://${MONGO_ROOT_USER:-nexus}:${MONGO_ROOT_PASS}@mongo:27017/nexuschat?authSource=admin
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
-      - "1337:1337"
+      - "127.0.0.1:1337:1337"   # bind to loopback — put Nginx in front
     networks:
       - internal
       - external
+    volumes:
+      - backend_logs:/app/logs   # persist logs outside container
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:1337/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '1.0'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
-  # ── Next.js Frontend (Node 24) ────────────────────────────────────────────────
+  # ── Next.js Frontend ─────────────────────────────────────────────────────────
   frontend:
+    container_name: nexus_frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: runner
       args:
-        NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL:-http://localhost:1337}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:1337}
         NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:1337}
+        NEXT_TELEMETRY_DISABLED: "1"      # opt out of Next.js telemetry
+      cache_from:
+        - type=local,src=/tmp/.buildcache/frontend
+      cache_to:
+        - type=local,dest=/tmp/.buildcache/frontend,mode=max
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy        # wait for backend /health to pass
     environment:
       NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      PORT: 3000
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
+    networks:
+      - external
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: '1.0'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Nginx Reverse Proxy ──────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nexus_nginx
+    restart: unless-stopped
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot_certs:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    networks:
+      - external
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ── Certbot (TLS cert renewal) ───────────────────────────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    container_name: nexus_certbot
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: >
+      sh -c "trap exit TERM;
+             while :; do
+               certbot renew --webroot -w /var/www/certbot --quiet;
+               sleep 12h & wait $${!};
+             done"
     networks:
       - external
 
+# ── Volumes ──────────────────────────────────────────────────────────────────
 volumes:
   mongodata:
+    driver: local
   mongoconfig:
+    driver: local
+  backend_logs:
+    driver: local
+  certbot_certs:
+    driver: local
+  certbot_www:
+    driver: local
 
+# ── Networks ─────────────────────────────────────────────────────────────────
 networks:
   internal:
     driver: bridge
+    internal: true          # ← no internet access; mongo is fully isolated
   external:
     driver: bridge
