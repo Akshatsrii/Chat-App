@@ -267,7 +267,7 @@ cd frontend
 nvm use
 npm install
 cp .env.local.example .env.local
-# NEXT_PUBLIC_STRAPI_URL=http://localhost:1337 (pre-configured)
+# NEXT_PUBLIC_STRAPI_URL=http://localhost:3000 (pre-configured)
 
 npm run dev
 # → http://localhost:3000
