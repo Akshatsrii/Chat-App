@@ -6,7 +6,6 @@ import dynamic from 'next/dynamic';
 import { useSocket } from '@/contexts/SocketContext';
 import { cn, truncate } from '@/lib/utils';
 
-// Lazy-load emoji picker to avoid SSR issues
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
 interface MessageInputProps {
@@ -25,7 +24,6 @@ export default function MessageInput({ roomName }: MessageInputProps) {
   const isTypingRef = useRef(false);
   const emojiRef = useRef<HTMLDivElement>(null);
 
-  // Auto-resize textarea
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -33,7 +31,6 @@ export default function MessageInput({ roomName }: MessageInputProps) {
     el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
   }, [content]);
 
-  // Close emoji picker on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) {
@@ -44,7 +41,6 @@ export default function MessageInput({ roomName }: MessageInputProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Focus on reply
   useEffect(() => {
     if (replyTarget) textareaRef.current?.focus();
   }, [replyTarget]);
@@ -99,17 +95,53 @@ export default function MessageInput({ roomName }: MessageInputProps) {
   const isNearLimit = remaining < 200;
   const canSend = content.trim().length > 0;
 
+  const iconBtnStyle: React.CSSProperties = {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: '#4a4060',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '5px',
+    borderRadius: '7px',
+    transition: 'color 0.15s, background 0.15s',
+    flexShrink: 0,
+  };
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" style={{ fontFamily: "'Inter', sans-serif" }}>
+
       {/* Reply preview */}
       {replyTarget && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl animate-slide-in-up" style={{ background: 'rgba(0,212,255,0.05)', border: '1px solid rgba(0,212,255,0.12)' }}>
-          <Reply size={13} style={{ color: 'var(--color-cyan)', flexShrink: 0 }} />
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-xl"
+          style={{
+            background: 'rgba(124,58,237,0.07)',
+            border: '1px solid rgba(124,58,237,0.18)',
+          }}
+        >
+          <Reply size={13} style={{ color: '#a78bfa', flexShrink: 0 }} />
           <div className="flex-1 min-w-0">
-            <span className="text-xs font-semibold" style={{ color: 'var(--color-cyan)' }}>Replying to @{replyTarget.sender.username || '…'}</span>
-            <p className="text-xs truncate" style={{ color: 'var(--color-subtle)' }}>{truncate(replyTarget.content, 80)}</p>
+            <span
+              className="text-xs font-semibold"
+              style={{ color: '#a78bfa', fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              Replying to @{replyTarget.sender.username || '…'}
+            </span>
+            <p
+              className="text-xs truncate"
+              style={{ color: '#5c5870', fontFamily: "'JetBrains Mono', monospace" }}
+            >
+              {truncate(replyTarget.content, 80)}
+            </p>
           </div>
-          <button onClick={() => setReplyTarget(null)} className="btn-icon w-6 h-6 shrink-0">
+          <button
+            onClick={() => setReplyTarget(null)}
+            style={{ ...iconBtnStyle, width: '22px', height: '22px' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#4a4060'; }}
+          >
             <X size={12} />
           </button>
         </div>
@@ -119,15 +151,22 @@ export default function MessageInput({ roomName }: MessageInputProps) {
       <div
         className="flex items-end gap-2 px-3 py-2.5 rounded-xl transition-all duration-200"
         style={{
-          background: 'rgba(10,13,22,0.7)',
+          background: '#0f0f18',
           border: isFocused
-            ? '1px solid rgba(0,212,255,0.4)'
-            : '1px solid var(--color-border)',
-          boxShadow: isFocused ? '0 0 0 3px rgba(0,212,255,0.06), 0 0 24px rgba(0,212,255,0.06)' : 'none',
+            ? '1px solid rgba(124,58,237,0.5)'
+            : '1px solid rgba(124,58,237,0.15)',
+          boxShadow: isFocused
+            ? '0 0 0 3px rgba(124,58,237,0.08)'
+            : 'none',
         }}
       >
-        {/* Attachment button */}
-        <button className="btn-icon shrink-0 mb-0.5" data-tooltip="Attach file (coming soon)">
+        {/* Attachment */}
+        <button
+          style={iconBtnStyle}
+          className="mb-0.5"
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#a78bfa'; e.currentTarget.style.background = 'rgba(124,58,237,0.1)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#4a4060'; e.currentTarget.style.background = 'none'; }}
+        >
           <Paperclip size={17} />
         </button>
 
@@ -141,29 +180,53 @@ export default function MessageInput({ roomName }: MessageInputProps) {
           onBlur={() => setIsFocused(false)}
           placeholder={`Message #${roomName} · Shift+Enter for new line`}
           rows={1}
-          className="flex-1 resize-none bg-transparent text-sm leading-relaxed py-1 outline-none font-body"
-          style={{ color: 'var(--color-text-bright)', maxHeight: 180, minHeight: 24 }}
+          className="flex-1 resize-none bg-transparent py-1 outline-none leading-relaxed"
+          style={{
+            color: '#e9e6f4',
+            fontSize: '14px',
+            maxHeight: 180,
+            minHeight: 24,
+            fontFamily: "'Inter', sans-serif",
+            border: 'none',
+          }}
         />
 
         <div className="flex items-center gap-1 shrink-0 mb-0.5">
           {/* Char counter */}
           {isNearLimit && (
-            <span className="text-[11px] font-mono transition-colors" style={{ color: remaining < 50 ? 'var(--color-rose)' : 'var(--color-amber)' }}>
+            <span
+              style={{
+                fontSize: '11px',
+                fontFamily: "'JetBrains Mono', monospace",
+                color: remaining < 50 ? '#f87171' : '#fbbf24',
+                transition: 'color 0.2s',
+              }}
+            >
               {remaining}
             </span>
           )}
 
-          {/* Emoji picker button */}
+          {/* Emoji */}
           <div className="relative" ref={emojiRef}>
             <button
-              className={cn('btn-icon', showEmoji ? 'active' : '')}
+              style={{
+                ...iconBtnStyle,
+                color: showEmoji ? '#a78bfa' : '#4a4060',
+                background: showEmoji ? 'rgba(124,58,237,0.12)' : 'none',
+              }}
               onClick={() => setShowEmoji((p) => !p)}
-              data-tooltip="Emoji"
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#a78bfa'; e.currentTarget.style.background = 'rgba(124,58,237,0.1)'; }}
+              onMouseLeave={(e) => {
+                if (!showEmoji) {
+                  e.currentTarget.style.color = '#4a4060';
+                  e.currentTarget.style.background = 'none';
+                }
+              }}
             >
               <Smile size={17} />
             </button>
             {showEmoji && (
-              <div className="absolute bottom-full right-0 mb-2 z-50 animate-fade-in-scale">
+              <div className="absolute bottom-full right-0 mb-2 z-50">
                 <EmojiPicker
                   onEmojiClick={onEmojiClick}
                   theme={'dark' as unknown as import('emoji-picker-react').Theme}
@@ -175,35 +238,65 @@ export default function MessageInput({ roomName }: MessageInputProps) {
             )}
           </div>
 
-          {/* Voice message button */}
-          <button className="btn-icon" data-tooltip="Voice message (coming soon)">
+          {/* Voice */}
+          <button
+            style={iconBtnStyle}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#a78bfa'; e.currentTarget.style.background = 'rgba(124,58,237,0.1)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#4a4060'; e.currentTarget.style.background = 'none'; }}
+          >
             <Mic size={17} />
           </button>
 
-          {/* Send button */}
+          {/* Send */}
           <button
             onClick={submit}
             disabled={!canSend}
             className="flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 shrink-0"
             style={{
-              background: canSend ? 'linear-gradient(135deg, var(--color-cyan-dim), var(--color-cyan))' : 'var(--color-surface)',
-              color: canSend ? 'var(--color-void)' : 'var(--color-muted)',
+              background: canSend ? '#7c3aed' : 'rgba(124,58,237,0.08)',
+              color: canSend ? '#fff' : '#3a3750',
               cursor: canSend ? 'pointer' : 'not-allowed',
-              transform: canSend ? undefined : 'scale(0.95)',
-              boxShadow: canSend ? '0 4px 16px rgba(0,212,255,0.25)' : 'none',
+              border: canSend ? 'none' : '1px solid rgba(124,58,237,0.1)',
+              transform: canSend ? 'scale(1)' : 'scale(0.95)',
+              boxShadow: canSend ? '0 4px 16px rgba(124,58,237,0.35)' : 'none',
+              transition: 'all 0.2s',
             }}
-            data-tooltip="Send (Enter)"
+            onMouseEnter={(e) => { if (canSend) e.currentTarget.style.background = '#6d28d9'; }}
+            onMouseLeave={(e) => { if (canSend) e.currentTarget.style.background = '#7c3aed'; }}
+            onMouseDown={(e) => { if (canSend) e.currentTarget.style.transform = 'scale(0.93)'; }}
+            onMouseUp={(e) => { if (canSend) e.currentTarget.style.transform = 'scale(1)'; }}
           >
             <Send size={15} style={{ marginLeft: 1 }} />
           </button>
         </div>
       </div>
 
-      {/* Shortcut hint */}
-      <p className="text-[10px] text-center font-mono" style={{ color: 'var(--color-muted)' }}>
-        <kbd className="px-1 py-0.5 rounded text-[9px]" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>Enter</kbd> to send ·{' '}
-        <kbd className="px-1 py-0.5 rounded text-[9px]" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>Shift+Enter</kbd> for new line ·{' '}
-        <kbd className="px-1 py-0.5 rounded text-[9px]" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>Esc</kbd> to cancel reply
+      {/* Shortcut hints */}
+      <p
+        className="text-[10px] text-center"
+        style={{ color: '#2e2b3d', fontFamily: "'JetBrains Mono', monospace" }}
+      >
+        <kbd
+          className="px-1 py-0.5 rounded text-[9px]"
+          style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.15)', color: '#5c5070' }}
+        >
+          Enter
+        </kbd>{' '}
+        to send ·{' '}
+        <kbd
+          className="px-1 py-0.5 rounded text-[9px]"
+          style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.15)', color: '#5c5070' }}
+        >
+          Shift+Enter
+        </kbd>{' '}
+        for new line ·{' '}
+        <kbd
+          className="px-1 py-0.5 rounded text-[9px]"
+          style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.15)', color: '#5c5070' }}
+        >
+          Esc
+        </kbd>{' '}
+        to cancel reply
       </p>
     </div>
   );
