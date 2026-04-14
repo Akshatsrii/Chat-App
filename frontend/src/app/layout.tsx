@@ -30,10 +30,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
+      <body className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-screen overflow-hidden`}>
         <AuthProvider>
           <SocketProvider>
-            {children}
+            <div className="h-full w-full overflow-hidden">
+              {children}
+            </div>
           </SocketProvider>
         </AuthProvider>
       </body>

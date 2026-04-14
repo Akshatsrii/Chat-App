@@ -13,7 +13,7 @@ export default function ChatShell() {
 
   return (
     <div
-      className="flex h-screen overflow-hidden relative"
+      className="flex h-full w-full overflow-hidden relative"
       style={{ background: '#0a0a0f', fontFamily: "'Inter', sans-serif" }}
     >
       {/* Ambient glow blobs */}
@@ -46,12 +46,12 @@ export default function ChatShell() {
       <ParticleBackground />
 
       {/* App shell */}
-      <div className="relative z-10 flex w-full h-full">
+      <div className="relative z-10 flex w-full h-full min-h-0">
         <Sidebar
           mobileOpen={mobileSidebarOpen}
           onMobileClose={() => setMobileSidebarOpen(false)}
         />
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           {currentRoom ? (
             <ChatRoom onMenuClick={() => setMobileSidebarOpen(true)} />
           ) : (

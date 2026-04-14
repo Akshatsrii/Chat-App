@@ -84,7 +84,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
   const content = (
     <div
-      className="flex flex-col h-full w-72"
+  className="flex flex-col h-full w-72 max-w-[288px] flex-shrink-0 overflow-hidden"
       style={{ background: PANEL, borderRight: `1px solid ${BORDER}` }}
     >
       {/* Top accent line — purple gradient */}
